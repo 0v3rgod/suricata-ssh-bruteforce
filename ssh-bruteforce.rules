@@ -1,0 +1,49 @@
+# Regra Suricata: SSH brute-force detection
+# Testado em lab VirtualBox (Linux attacker → Windows 11 target)
+# 
+# Instalação:
+#   sudo cp ssh-bruteforce.rules /etc/suricata/rules/
+#   sudo suricata-update
+#   sudo systemctl restart suricata
+#
+# Logs: /var/log/suricata/eve.json (filtrar por "SSH_BRUTEFORCE")
+
+alert tcp any any -> $HOME_NET 22 (
+    msg:"SSH_BRUTEFORCE Possible brute force attack";
+    flow:established,to_server;
+    content:"SSH-"; offset:0; depth:4;
+    detection_filter:track by_src, count 10, seconds 60;
+    sid:1000001; rev:1;
+    classtype:attempted-admin;
+    metadata:created_at 2026-11-02;
+)
+
+alert tcp any any -> $HOME_NET 22 (
+    msg:"SSH_BRUTEFORCE Authentication failure spike";
+    flow:established,to_server;
+    content:"Failed password"; nocase;
+    detection_filter:track by_src, count 5, seconds 30;
+    sid:1000002; rev:1;
+    classtype:attempted-admin;
+    metadata:created_at 2026-11-02;
+)
+
+alert tcp any any -> $HOME_NET 22 (
+    msg:"SSH_BRUTEFORCE Invalid user attempts";
+    flow:established,to_server;
+    content:"Invalid user"; nocase;
+    detection_filter:track by_src, count 5, seconds 30;
+    sid:1000003; rev:1;
+    classtype:attempted-admin;
+    metadata:created_at 2026-11-02;
+)
+
+alert tcp any any -> $HOME_NET 22 (
+    msg:"SSH_BRUTEFORCE Connection without auth (scanner)";
+    flow:established,to_server;
+    content:"SSH-"; offset:0; depth:4;
+    threshold:type threshold, track by_src, count 1, seconds 1;
+    sid:1000004; rev:1;
+    classtype:attempted-recon;
+    metadata:created_at 2026-11-02;
+)
